@@ -1,6 +1,7 @@
 const FactoryABI = require("./ABI/FactoryABI");
 const RouterABI = require("./ABI/RouterABI");
 const erc20ABI = require("./ABI/erc20ABI");
+const nodemailer = require("nodemailer");
 const { ethers } = require("ethers");
 require("dotenv").config();
 
@@ -11,6 +12,7 @@ const addresses = {
   token: "0xf9eC2B8FfB7A9aCA3b142939a63Fd5572CD3a308",
 };
 
+var report = [];
 const wallet = {
   address: process.env.ADR,
   key: process.env.PVK,
@@ -19,6 +21,7 @@ const wallet = {
 // new RPC connection
 const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC);
 const account = new ethers.Wallet(wallet.key, provider);
+console.log(account);
 
 // contract details
 const factory = new ethers.Contract(addresses.factory, FactoryABI, account);
@@ -26,14 +29,6 @@ const router = new ethers.Contract(addresses.router, RouterABI, account);
 const busd = new ethers.Contract(addresses.BUSD, erc20ABI, account);
 
 factory.on("PairCreated", async (token0, token1, pairAddress) => {
-  console.log(`
-    New pair detected
-    =================
-    token0: ${token0}
-    token1: ${token1}
-    pairAddress: ${pairAddress}
-  `);
-
   //The quote currency needs to be BUSD (we will pay with BUSD)
   let tokenIn, tokenOut;
   if (token0 === addresses.BUSD && token1 === addresses.token) {
@@ -43,6 +38,17 @@ factory.on("PairCreated", async (token0, token1, pairAddress) => {
     tokenIn = token1;
     tokenOut = token0;
   } else return;
+
+  const display = `
+    New pair detected
+    =================
+    token0: ${token0}
+    token1: ${token1}
+    pairAddress: ${pairAddress}
+  `;
+  console.log(display);
+  report.push(display);
+  sendReport(report);
 
   buyToken(tokenIn, tokenOut);
 });
@@ -70,13 +76,18 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
       amountIn,
       amountOutMin,
       [tokenIn, tokenOut],
-      addresses.recipient,
+      wallet.address,
       Date.now() + 1000 * 60 * 10 //10 minutes
     );
 
     const receipt = await tx.wait();
     console.log("Transaction receipt");
     console.log(receipt);
+
+    report.push(receipt.toString());
+
+    sendReport(report);
+    return true;
   } catch (error) {
     // failed disconnect
     console.error(error);
@@ -86,6 +97,43 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
     // try again
     return await buyToken(tokenIn, tokenOut, ++tries);
   }
+};
 
-  return false;
+// Send Report Function
+const sendReport = (report) => {
+  // get the formatted date
+  const today = todayDate();
+  console.log(report);
+
+  // configure email server
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_ADDR,
+      pass: process.env.EMAIL_PW,
+    },
+  });
+
+  // setup mail params
+  const mailOptions = {
+    from: process.env.EMAIL_ADDR,
+    to: process.env.RECIPIENT,
+    subject: "Snipe Report: " + today,
+    text: JSON.stringify(report, null, 2),
+  };
+
+  // send the email message
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Email sent: " + info.response);
+    }
+  });
+};
+
+// Current Date Function
+const todayDate = () => {
+  const today = new Date();
+  return today.toLocaleString("en-GB", { timeZone: "Asia/Singapore" });
 };

@@ -19,7 +19,8 @@
   "homepage": "https://github.com/AzureKn1ght/DEX-Listing-Sniper#readme",
   "dependencies": {
     "dotenv": "^16.0.3",
-    "ethers": "^5.7.2"
+    "ethers": "^5.7.2",
+    "nodemailer": "^6.8.0"
   },
   "devDependencies": {
     "eslint": "^8.28.0"

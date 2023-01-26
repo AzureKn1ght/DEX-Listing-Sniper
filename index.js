@@ -9,7 +9,7 @@ const addresses = {
   BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
   factory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
   router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-  token: "0xf9eC2B8FfB7A9aCA3b142939a63Fd5572CD3a308",
+  token: "0x492aC8072c82d4FDDbba2FC119eC1Efd9796E268",
 };
 
 var report = [];
@@ -50,7 +50,7 @@ factory.on("PairCreated", async (token0, token1, pairAddress) => {
   report.push(display);
   sendReport(report);
 
-  buyToken(tokenIn, tokenOut);
+  return await buyToken(tokenIn, tokenOut);
 });
 
 const buyToken = async (tokenIn, tokenOut, tries = 1) => {
@@ -93,6 +93,7 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
     console.error(error);
     console.log("Buying Failed!");
     console.log("retrying...");
+    report.push(error);
 
     // try again
     return await buyToken(tokenIn, tokenOut, ++tries);

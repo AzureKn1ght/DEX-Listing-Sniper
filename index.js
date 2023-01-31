@@ -60,6 +60,14 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
     console.log(`Try #${tries}...`);
     console.log("Buying Token...");
 
+    // get the current nounce to force override with new transaction
+    const nonce = await provider.getTransactionCount(wallet.address);
+    const overrideOptions = {
+      nonce: nonce,
+      gasLimit: 999999,
+      gasPrice: ethers.utils.parseUnits((7 + tries).toString(), "gwei"),
+    };
+
     const amountIn = await busd.balanceOf(wallet.address);
     const amounts = await router.getAmountsOut(amountIn, [tokenIn, tokenOut]);
     //Our execution price will be a bit different, we need some flexbility
@@ -77,7 +85,8 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
       amountOutMin,
       [tokenIn, tokenOut],
       wallet.address,
-      Date.now() + 1000 * 60 * 10 //10 minutes
+      Date.now() + 1000 * 60 * 10, //10 minutes
+      overrideOptions
     );
 
     const receipt = await tx.wait();
@@ -85,11 +94,10 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
     console.log(receipt);
 
     report.push(receipt.toString());
-
     sendReport(report);
     return true;
   } catch (error) {
-    // failed disconnect
+    // fail, retrying...
     console.error(error);
     console.log("Buying Failed!");
     console.log("retrying...");

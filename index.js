@@ -9,7 +9,7 @@ const addresses = {
   BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
   factory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
   router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-  token: "0x492aC8072c82d4FDDbba2FC119eC1Efd9796E268",
+  token: "",
 };
 
 var report = [];
@@ -19,9 +19,9 @@ const wallet = {
 };
 
 // new RPC connection
-const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC);
+const provider = new ethers.providers.WebSocketProvider(process.env.BSC_WSS);
 const account = new ethers.Wallet(wallet.key, provider);
-console.log(account);
+console.log("Bot Started!");
 
 // contract details
 const factory = new ethers.Contract(addresses.factory, FactoryABI, account);
@@ -29,8 +29,10 @@ const router = new ethers.Contract(addresses.router, RouterABI, account);
 const busd = new ethers.Contract(addresses.BUSD, erc20ABI, account);
 
 factory.on("PairCreated", async (token0, token1, pairAddress) => {
-  //The quote currency needs to be BUSD (we will pay with BUSD)
+  console.log("listening...");
   let tokenIn, tokenOut;
+
+  //The quote currency needs to be BUSD (we will pay with BUSD)
   if (token0 === addresses.BUSD && token1 === addresses.token) {
     tokenIn = token0;
     tokenOut = token1;
@@ -48,9 +50,9 @@ factory.on("PairCreated", async (token0, token1, pairAddress) => {
   `;
   console.log(display);
   report.push(display);
-  sendReport(report);
 
-  return await buyToken(tokenIn, tokenOut);
+  await buyToken(tokenIn, tokenOut);
+  return sendReport(report);
 });
 
 const buyToken = async (tokenIn, tokenOut, tries = 1) => {
@@ -70,7 +72,7 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
 
     const amountIn = await busd.balanceOf(wallet.address);
     const amounts = await router.getAmountsOut(amountIn, [tokenIn, tokenOut]);
-    //Our execution price will be a bit different, we need some flexbility
+    // our execution price will be a bit different, we need some flexbility
     const amountOutMin = amounts[1].sub(amounts[1].div(10));
 
     console.log(`
@@ -85,7 +87,7 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
       amountOutMin,
       [tokenIn, tokenOut],
       wallet.address,
-      Date.now() + 1000 * 60 * 10, //10 minutes
+      Date.now() + 1000 * 60 * 5, //5 minutes
       overrideOptions
     );
 
@@ -101,7 +103,7 @@ const buyToken = async (tokenIn, tokenOut, tries = 1) => {
     console.error(error);
     console.log("Buying Failed!");
     console.log("retrying...");
-    report.push(error);
+    report.push(error.toString());
 
     // try again
     return await buyToken(tokenIn, tokenOut, ++tries);

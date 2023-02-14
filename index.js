@@ -6,10 +6,10 @@ const { ethers } = require("ethers");
 require("dotenv").config();
 
 const addresses = {
-  BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+  BUSD: "0x55d398326f99059ff775485246999027b3197955", //Actually USDT
   factory: "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
   router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-  token: "",
+  token: "0xc6C0C0f54a394931a5b224c8b53406633e35eeE7",
 };
 
 var report = [];
